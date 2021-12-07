@@ -5,6 +5,7 @@ import path from 'path';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 const handlebars = require('express-handlebars');
+const tus = require('tus-node-server');
 import mime from 'mime-types';
 dotenv.config();
 const app = express();
@@ -27,29 +28,13 @@ app.use(bodyParser.raw());
 app.use(bodyParser.text());
 app.use(bodyParser.urlencoded({extended:false}));
 
-app.get("/streams_pipe",async(req,res)=>{
-    try{
-        let readableStream = fs.createReadStream(uploadPath+"/input.txt","utf-8");
-        let writableStream = fs.createWriteStream(uploadPath+"/output.txt");
-        readableStream.pipe(writableStream);
-        let message = await new Promise((resolve,reject)=>{
-            readableStream.on('error',(error)=>{
-                reject(`error: ${error.message}`);
-            });
-            readableStream.on('data',(data)=>{
-                writableStream.write(" updated!");
-                console.log(data);
-            });
-            readableStream.on('end',()=>{
-                resolve("success!");
-            });
-        });
-        
-        res.send(message);
-    }catch(err){
-        res.send(err);
-    }
+const tusServer = new tus.Server();
+const tusRoute = express();
+tusRoute.all('*', tusServer.handle.bind(tusServer));
+tusServer.datastore = new tus.FileStore({
+    path: '/uploads'
 });
+app.use('/tus', tusRoute);
 
 app.get("/",(req,res)=>{
     res.render('index',{
