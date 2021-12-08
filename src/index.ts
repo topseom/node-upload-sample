@@ -27,6 +27,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.raw());
 app.use(bodyParser.text());
 app.use(bodyParser.urlencoded({extended:false}));
+app.use((req,res,next)=>{
+    res.locals['baseUrl'] = req.protocol+"://"+req.headers.host;
+    next();
+});
 
 const tusServer = new tus.Server();
 const tusRoute = express();
@@ -59,7 +63,7 @@ app.post("/upload",uploader.single('userfiles'),async(req,res)=>{
             });
             writableStream.on('finish',()=>{
                resolve({
-                path:req.protocol+"//"+req.hostname+"/uploads/"+filename,
+                path:res.locals['baseUrl']+"/uploads/"+filename,
                 filename
                });
             })
